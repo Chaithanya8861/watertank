@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WaterTank – My Orders</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+  <script src="js/db.js"></script>
+  <style>
+    :root{
+      --deep:#060d1a;--card:#0b1929;--card2:#0d1f38;
+      --border:rgba(255,255,255,.07);--cyan:#00c2d4;
+      --white:#f0f6ff;--gray:#7a9bb5;--green:#22c55e;
+      --yellow:#fbbf24;--red:#f43f5e;--purple:#a78bfa;--orange:#f97316;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--white);min-height:100vh}
+
+    /* NAV */
+    nav{display:flex;align-items:center;justify-content:space-between;padding:0 44px;height:66px;background:rgba(6,13,26,.97);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(14px)}
+    .logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;text-decoration:none;color:var(--white);display:flex;align-items:center;gap:8px}
+    .logo em{color:var(--cyan);font-style:normal}
+    .nav-r{display:flex;align-items:center;gap:12px}
+    .nav-user{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid var(--border);font-size:14px;color:var(--gray)}
+    .nav-user b{color:var(--white)}
+    .nbtn{padding:8px 16px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;text-decoration:none;transition:all .2s;cursor:pointer;border:none}
+    .nbtn.home{background:rgba(0,194,212,.1);border:1px solid rgba(0,194,212,.25);color:var(--cyan)}
+    .nbtn.home:hover{background:rgba(0,194,212,.2)}
+    .nbtn.out{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--red)}
+    .nbtn.out:hover{background:rgba(244,63,94,.2)}
+
+    .wrap{max-width:900px;margin:0 auto;padding:36px 24px}
+
+    /* PAGE HEADER */
+    .ph{margin-bottom:28px}
+    .ph h1{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:4px}
+    .ph h1 span{color:var(--cyan)}
+    .ph p{color:var(--gray);font-size:14px}
+
+    /* FILTER TABS */
+    .ftabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+    .ftab{padding:8px 18px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .ftab:hover{color:var(--white)}
+    .ftab.on{background:rgba(0,194,212,.12);border-color:rgba(0,194,212,.4);color:var(--cyan)}
+
+    /* ORDER CARD */
+    .order-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-bottom:16px;transition:box-shadow .2s;animation:fadeUp .4s ease-out both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    .order-card:hover{box-shadow:0 8px 32px rgba(0,0,0,.3)}
+
+    /* Card top bar — coloured by status */
+    .card-bar{height:3px}
+    .card-bar.confirmed{background:linear-gradient(90deg,var(--green),#86efac)}
+    .card-bar.pending{background:linear-gradient(90deg,var(--yellow),#fde68a)}
+    .card-bar.delivered{background:linear-gradient(90deg,var(--cyan),#5eead4)}
+    .card-bar.cancelled{background:linear-gradient(90deg,var(--red),#fca5a5)}
+
+    .card-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+    .order-id{font-family:monospace;font-size:14px;font-weight:700;color:var(--cyan)}
+    .order-date{color:var(--gray);font-size:12px;margin-top:2px}
+
+    /* Status badge */
+    .sbadge{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .sbadge.confirmed{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:var(--green)}
+    .sbadge.pending{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);color:var(--yellow)}
+    .sbadge.delivered{background:rgba(0,194,212,.12);border:1px solid rgba(0,194,212,.3);color:var(--cyan)}
+    .sbadge.cancelled{background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:var(--red)}
+
+    /* Card body */
+    .card-body{padding:20px 22px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:580px){.card-body{grid-template-columns:1fr}}
+
+    .info-row{display:flex;flex-direction:column;gap:2px}
+    .info-row .lbl{color:var(--gray);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+    .info-row .val{font-size:14px;font-weight:600}
+    .info-row .val.cyan{color:var(--cyan)}
+    .info-row .val.green{color:var(--green)}
+
+    /* Address — full width */
+    .addr-row{grid-column:1/-1}
+    .addr-row .val{font-size:13px;color:var(--gray);font-weight:400;line-height:1.5}
+
+    /* ── TRACKING TIMELINE ── */
+    .track-section{padding:0 22px 22px}
+    .track-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--gray);letter-spacing:.8px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+    .timeline{display:flex;flex-direction:column;gap:0}
+    .tstep{display:flex;gap:14px;align-items:flex-start;position:relative}
+    .tstep:not(:last-child)::after{content:'';position:absolute;left:15px;top:32px;width:2px;height:calc(100% - 6px);background:var(--border)}
+    .tstep:not(:last-child).done::after{background:var(--green)}
+    .tstep:not(:last-child).active::after{background:linear-gradient(180deg,var(--cyan),var(--border))}
+
+    .tdot{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:1;transition:all .3s}
+    .tdot.done{background:rgba(34,197,94,.15);border:2px solid rgba(34,197,94,.5)}
+    .tdot.active{background:rgba(0,194,212,.12);border:2px solid rgba(0,194,212,.5);box-shadow:0 0 0 4px rgba(0,194,212,.08);animation:pulse 2s ease-in-out infinite}
+    .tdot.idle{background:rgba(255,255,255,.03);border:2px solid var(--border)}
+    .tdot.cancelled{background:rgba(244,63,94,.1);border:2px solid rgba(244,63,94,.3)}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,194,212,.25)}50%{box-shadow:0 0 0 8px rgba(0,194,212,0)}}
+
+    .tinfo{padding:4px 0 18px}
+    .ttitle{font-size:14px;font-weight:700;margin-bottom:2px}
+    .ttitle.done{color:var(--white)}.ttitle.active{color:var(--cyan)}.ttitle.idle{color:var(--gray)}.ttitle.cancelled{color:var(--red)}
+    .tsub{font-size:12px;color:var(--gray);line-height:1.5}
+    .ttime{font-size:11px;color:var(--cyan);margin-top:3px;font-family:monospace}
+
+    /* Call driver button */
+    .driver-bar{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;background:rgba(255,255,255,.02);border-top:1px solid var(--border);flex-wrap:wrap;gap:10px}
+    .driver-info{display:flex;align-items:center;gap:10px}
+    .driver-av{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(0,194,212,.2),rgba(94,234,212,.1));display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+    .driver-name{font-weight:600;font-size:14px}
+    .driver-vehicle{font-size:12px;color:var(--cyan);font-family:monospace}
+    .call-btn{display:flex;align-items:center;gap:7px;padding:9px 18px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;color:var(--green);font-size:13px;font-weight:600;text-decoration:none;transition:all .2s;font-family:'DM Sans',sans-serif}
+    .call-btn:hover{background:rgba(34,197,94,.2);transform:translateY(-1px)}
+
+    /* Empty state */
+    .empty{text-align:center;padding:80px 20px}
+    .empty-ico{font-size:60px;margin-bottom:16px}
+    .empty h3{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px}
+    .empty p{color:var(--gray);font-size:14px;margin-bottom:24px}
+    .empty a{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,var(--cyan),#0094a8);border-radius:12px;color:#060d1a;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;text-decoration:none;transition:all .2s}
+    .empty a:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,194,212,.4)}
+
+    /* Summary stats at top */
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;text-align:center}
+    .stat-n{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:2px}
+    .stat-l{color:var(--gray);font-size:12px}
+    .stat.total .stat-n{color:var(--cyan)}
+    .stat.delivered .stat-n{color:var(--green)}
+    .stat.pending .stat-n{color:var(--yellow)}
+    .stat.cancelled .stat-n{color:var(--red)}
+    @media(max-width:500px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+    @media(max-width:600px){nav{padding:0 16px}.wrap{padding:20px 16px}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="dashboard.html">💧 Water<em>Tank</em></a>
+  <div class="nav-r">
+    <div class="nav-user">👤 <b id="navName">...</b></div>
+    <a href="dashboard.html" class="nbtn home">🏠 Home</a>
+    <button onclick="doLogout()" class="nbtn out">Logout</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- PAGE HEADER -->
+  <div class="ph">
+    <h1>My <span>Orders</span> 📦</h1>
+    <p>Track all your water tanker bookings in real time</p>
+  </div>
+
+  <!-- SUMMARY STATS -->
+  <div class="stats">
+    <div class="stat total"><div class="stat-n" id="stTotal">0</div><div class="stat-l">Total Orders</div></div>
+    <div class="stat delivered"><div class="stat-n" id="stDel">0</div><div class="stat-l">Delivered</div></div>
+    <div class="stat pending"><div class="stat-n" id="stPen">0</div><div class="stat-l">Pending</div></div>
+    <div class="stat cancelled"><div class="stat-n" id="stCan">0</div><div class="stat-l">Cancelled</div></div>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="ftabs">
+    <button class="ftab on" onclick="setFilter('all',this)">All Orders</button>
+    <button class="ftab"    onclick="setFilter('confirmed',this)">✅ Confirmed</button>
+    <button class="ftab"    onclick="setFilter('pending',this)">⏳ Pending</button>
+    <button class="ftab"    onclick="setFilter('delivered',this)">💧 Delivered</button>
+    <button class="ftab"    onclick="setFilter('cancelled',this)">❌ Cancelled</button>
+  </div>
+
+  <!-- ORDERS LIST -->
+  <div id="orderList"></div>
+
+</div>
+
+<script>
+  let allOrders  = [];
+  let activeFilter = 'all';
+
+  // ── INIT ──────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    await initDB();
+    requireLogin();
+    const user = getSession();
+    document.getElementById('navName').textContent = user.name;
+    allOrders = getUserBookings(user.id);
+    renderStats();
+    renderOrders();
+  });
+
+  function doLogout() { clearSession(); location.href = 'index.html'; }
+
+  // ── STATS ─────────────────────────────────────────────
+  function renderStats() {
+    document.getElementById('stTotal').textContent = allOrders.length;
+    document.getElementById('stDel').textContent   = allOrders.filter(o=>o.status==='delivered').length;
+    document.getElementById('stPen').textContent   = allOrders.filter(o=>o.status==='pending'||o.status==='confirmed').length;
+    document.getElementById('stCan').textContent   = allOrders.filter(o=>o.status==='cancelled').length;
+  }
+
+  // ── FILTER ─────────────────────────────────────────────
+  function setFilter(f, btn) {
+    activeFilter = f;
+    document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    renderOrders();
+  }
+
+  // ── RENDER ORDERS ──────────────────────────────────────
+  function renderOrders() {
+    const list = activeFilter === 'all'
+      ? allOrders
+      : allOrders.filter(o => o.status === activeFilter);
+
+    const el = document.getElementById('orderList');
+
+    if (!list.length) {
+      el.innerHTML = `
+        <div class="empty">
+          <div class="empty-ico">${activeFilter === 'all' ? '📦' : '🔍'}</div>
+          <h3>${activeFilter === 'all' ? 'No Orders Yet' : 'No '+activeFilter+' orders'}</h3>
+          <p>${activeFilter === 'all' ? 'You haven\'t booked a tanker yet.' : 'No orders with this status found.'}</p>
+          ${activeFilter === 'all' ? '<a href="dashboard.html">🚛 Book Your First Tanker</a>' : ''}
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = list.map((o, i) => buildCard(o, i)).join('');
+  }
+
+  // ── BUILD ORDER CARD ───────────────────────────────────
+  function buildCard(o, idx) {
+    const ordId   = 'WT-' + String(o.id).padStart(6,'0');
+    const date    = fmtDate(o.booked_at);
+    const liters  = parseInt(o.liters).toLocaleString();
+    const amount  = '₹' + parseFloat(o.total_amount).toFixed(2);
+    const delay   = (idx * 0.06).toFixed(2) + 's';
+    const steps   = buildTimeline(o.status, o.booked_at, o.time_slot);
+    const payIcon = payIco(o.payment_method);
+
+    return `
+    <div class="order-card" style="animation-delay:${delay}">
+      <div class="card-bar ${o.status}"></div>
+
+      <!-- HEAD -->
+      <div class="card-head">
+        <div>
+          <div class="order-id">${ordId}</div>
+          <div class="order-date">📅 Booked on ${date}</div>
+        </div>
+        <span class="sbadge ${o.status}">${statusIcon(o.status)} ${o.status}</span>
+      </div>
+
+      <!-- DETAILS GRID -->
+      <div class="card-body">
+        <div class="info-row">
+          <span class="lbl">💧 Water Quantity</span>
+          <span class="val cyan">${liters} Liters</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">💰 Amount Paid</span>
+          <span class="val green">${amount}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">⏰ Time Slot</span>
+          <span class="val">${esc(o.time_slot || '—')}</span>
+        </div>
+        <div class="info-row">
+          <span class="lbl">${payIcon} Payment Method</span>
+          <span class="val">${esc(o.payment_method || '—')}</span>
+        </div>
+        <div class="info-row addr-row">
+          <span class="lbl">📍 Delivery Address</span>
+          <span class="val">${esc(o.delivery_address || '—')}</span>
+        </div>
+      </div>
+
+      <!-- TRACKING TIMELINE -->
+      <div class="track-section">
+        <div class="track-title">📡 Order Tracking</div>
+        <div class="timeline">
+          ${steps}
+        </div>
+      </div>
+
+      <!-- DRIVER BAR -->
+      <div class="driver-bar">
+        <div class="driver-info">
+          <div class="driver-av">🚛</div>
+          <div>
+            <div class="driver-name">${esc(o.driver_name)}</div>
+            <div class="driver-vehicle">${esc(o.vehicle_number)}</div>
+          </div>
+        </div>
+        ${o.status !== 'cancelled'
+          ? `<a href="tel:${o.driver_phone||''}" class="call-btn">📞 Call Driver</a>`
+          : `<span style="color:var(--red);font-size:13px">❌ Order Cancelled</span>`
+        }
+      </div>
+
+    </div>`;
+  }
+
+  // ── TIMELINE STEPS ─────────────────────────────────────
+  function buildTimeline(status, bookedAt, timeSlot) {
+    // Define all steps with their status-based states
+    const STEPS = [
+      {
+        icon:'📋', label:'Order Placed',
+        sub:'Your booking has been received',
+        timeNote: fmtDate(bookedAt),
+        state: 'done'  // always done once order exists
+      },
+      {
+        icon:'✅', label:'Payment Verified',
+        sub: status === 'pending'
+          ? 'Admin is reviewing your payment receipt'
+          : status === 'cancelled' ? 'Payment not verified' : 'Payment confirmed by admin',
+        timeNote: status === 'confirmed' || status === 'delivered' ? 'Verified ✓' : null,
+        state: status === 'confirmed' || status === 'delivered' ? 'done'
+             : status === 'cancelled' ? 'cancelled' : 'active'
+      },
+      {
+        icon:'📞', label:'Driver Assigned',
+        sub: status === 'confirmed' || status === 'delivered'
+          ? 'Driver will contact you shortly'
+          : 'Waiting for payment confirmation',
+        timeNote: status === 'confirmed' || status === 'delivered' ? 'Driver en route' : null,
+        state: status === 'confirmed' || status === 'delivered' ? 'active'
+             : status === 'cancelled' ? 'cancelled' : 'idle'
+      },
+      {
+        icon:'🚛', label:'Tanker In Route',
+        sub: status === 'delivered'
+          ? 'Tanker reached your location'
+          : 'Driver heading to your delivery address',
+        timeNote: status === 'delivered' ? 'Arrived ✓' : timeSlot ? `Slot: ${timeSlot}` : null,
+        state: status === 'delivered' ? 'done'
+             : status === 'cancelled' ? 'cancelled' : 'idle'
+      },
+      {
+        icon:'💧', label:'Water Delivered',
+        sub: status === 'delivered'
+          ? 'Tank filled successfully. Thank you!'
+          : 'Awaiting tanker arrival',
+        timeNote: status === 'delivered' ? 'Completed ✓' : null,
+        state: status === 'delivered' ? 'done'
+             : status === 'cancelled' ? 'cancelled' : 'idle'
+      }
+    ];
+
+    // For cancelled orders — override all steps after placement
+    if (status === 'cancelled') {
+      STEPS[1].icon = '❌'; STEPS[1].sub  = 'Order was cancelled';
+      STEPS[2].icon = '—'; STEPS[3].icon = '—'; STEPS[4].icon = '—';
+    }
+
+    return STEPS.map((s, i) => {
+      const isLast = i === STEPS.length - 1;
+      return `
+      <div class="tstep ${s.state}">
+        <div class="tdot ${s.state}">${s.icon}</div>
+        <div class="tinfo">
+          <div class="ttitle ${s.state}">${s.label}</div>
+          <div class="tsub">${s.sub}</div>
+          ${s.timeNote ? `<div class="ttime">${s.timeNote}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── HELPERS ─────────────────────────────────────────────
+  function statusIcon(s) {
+    return { confirmed:'✅', pending:'⏳', delivered:'💧', cancelled:'❌' }[s] || '•';
+  }
+
+  function payIco(p) {
+    if (!p) return '💳';
+    p = p.toLowerCase();
+    if (p.includes('google')) return '🟢';
+    if (p.includes('phone'))  return '💜';
+    if (p.includes('paytm'))  return '🔵';
+    if (p.includes('cash'))   return '💵';
+    return '📱';
+  }
+
+  function fmtDate(dt) {
+    if (!dt) return '—';
+    try {
+      return new Date(dt).toLocaleDateString('en-IN', {
+        day:'2-digit', month:'short', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      });
+    } catch { return dt; }
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>

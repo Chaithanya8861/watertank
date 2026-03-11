@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WaterTank – Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <!-- sql.js — SQLite in the browser, no installation needed -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+  <script src="js/db.js"></script>
+  <style>
+    :root{--deep:#060d1a;--card:#0b1929;--border:rgba(255,255,255,.07);--cyan:#00c2d4;--cyan2:#5eead4;--white:#f0f6ff;--gray:#7a9bb5;--green:#22c55e;--red:#f43f5e}
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--white);min-height:100vh;display:flex}
+
+    /* ── LEFT ── */
+    .left{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:80px 64px;background:linear-gradient(135deg,#060d1a,#091a30)}
+    .left::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 25% 55%,rgba(0,194,212,.1),transparent),radial-gradient(ellipse 50% 50% at 80% 20%,rgba(94,234,212,.05),transparent)}
+
+    .rings{position:absolute;bottom:-80px;right:-80px;width:460px;height:460px;opacity:.07}
+    .ring{position:absolute;border-radius:50%;border:1px solid var(--cyan);animation:ripple 4s ease-out infinite}
+    .ring:nth-child(1){width:160px;height:160px;top:50%;left:50%;transform:translate(-50%,-50%)}
+    .ring:nth-child(2){width:280px;height:280px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:.8s}
+    .ring:nth-child(3){width:400px;height:400px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:1.6s}
+    .ring:nth-child(4){width:520px;height:520px;top:50%;left:50%;transform:translate(-50%,-50%);animation-delay:2.4s}
+    @keyframes ripple{0%{opacity:1;transform:translate(-50%,-50%) scale(.5)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+
+    .bubbles{position:absolute;inset:0;pointer-events:none}
+    .bubble{position:absolute;border-radius:50%;border:1px solid rgba(0,194,212,.25);animation:floatUp linear infinite}
+    .bubble:nth-child(1){width:10px;height:10px;left:12%;animation-duration:9s}
+    .bubble:nth-child(2){width:16px;height:16px;left:30%;animation-duration:13s;animation-delay:-4s}
+    .bubble:nth-child(3){width:7px;height:7px;left:55%;animation-duration:8s;animation-delay:-2s}
+    .bubble:nth-child(4){width:20px;height:20px;left:72%;animation-duration:11s;animation-delay:-6s}
+    .bubble:nth-child(5){width:12px;height:12px;left:88%;animation-duration:10s;animation-delay:-1s}
+    @keyframes floatUp{0%{bottom:-20px;opacity:0}10%{opacity:1}90%{opacity:.4}100%{bottom:105%;opacity:0}}
+
+    .lc{position:relative;z-index:2}
+    .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:20px;background:rgba(0,194,212,.1);border:1px solid rgba(0,194,212,.25);color:var(--cyan);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:28px}
+    .lc h1{font-family:'Syne',sans-serif;font-size:clamp(36px,4vw,58px);font-weight:800;line-height:1.08;margin-bottom:20px}
+    .lc h1 .g{background:linear-gradient(90deg,var(--cyan),var(--cyan2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .lc p{color:var(--gray);font-size:16px;line-height:1.75;max-width:390px;margin-bottom:44px}
+    .metrics{display:flex;gap:36px}
+    .metric h3{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--cyan)}
+    .metric p{font-size:13px;color:var(--gray);margin-top:2px}
+
+    /* ── RIGHT ── */
+    .right{width:470px;min-height:100vh;background:rgba(11,25,41,.85);border-left:1px solid var(--border);display:flex;align-items:center;justify-content:center;padding:56px 48px;position:relative}
+    .right::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+
+    .fb{width:100%;animation:fadeUp .5s ease-out}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+    .fh{margin-bottom:30px}
+    .fh h2{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:6px}
+    .fh p{color:var(--gray);font-size:14px}
+
+    .tabs{display:flex;background:rgba(255,255,255,.04);border-radius:10px;padding:4px;margin-bottom:26px}
+    .tab{flex:1;padding:10px;border:none;cursor:pointer;color:var(--gray);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;background:none;transition:all .25s}
+    .tab.on{background:linear-gradient(135deg,#0284c7,#0369a1);color:var(--white);box-shadow:0 4px 14px rgba(2,132,199,.35)}
+
+    .field{margin-bottom:16px}
+    .field label{display:block;color:var(--gray);font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px}
+    .field input{width:100%;padding:13px 16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:11px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:all .25s}
+    .field input::placeholder{color:rgba(255,255,255,.22)}
+    .field input:focus{border-color:var(--cyan);background:rgba(0,194,212,.05);box-shadow:0 0 0 3px rgba(0,194,212,.1)}
+
+    .alert{border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:14px;display:none}
+    .alert.show{display:block}
+    .alert.err{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);color:var(--red)}
+    .alert.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:var(--green)}
+
+    .forgot{text-align:right;margin-bottom:18px}
+    .forgot a{color:var(--cyan);font-size:13px;text-decoration:none}
+
+    .btn-sub{width:100%;padding:15px;background:linear-gradient(135deg,var(--cyan),#0094a8);border:none;border-radius:12px;color:#060d1a;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.4px;transition:all .2s}
+    .btn-sub:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,194,212,.4)}
+    .btn-sub:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+    .spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(6,13,26,.3);border-top-color:#060d1a;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .sw{text-align:center;margin-top:18px;color:var(--gray);font-size:14px}
+    .sw a{color:var(--cyan);font-weight:500;cursor:pointer}
+
+    @media(max-width:860px){.left{display:none}.right{width:100%}}
+  </style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="left">
+  <div class="rings">
+    <div class="ring"></div><div class="ring"></div>
+    <div class="ring"></div><div class="ring"></div>
+  </div>
+  <div class="bubbles">
+    <div class="bubble"></div><div class="bubble"></div>
+    <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+  </div>
+  <div class="lc">
+    <div class="badge">💧 Trusted Water Delivery</div>
+    <h1>Pure Water,<br/><span class="g">Delivered Fast</span><br/>Every Time.</h1>
+    <p>Book verified water tankers from local suppliers in minutes. Real-time availability, transparent pricing, instant confirmation.</p>
+    <div class="metrics">
+      <div class="metric"><h3>500+</h3><p>Tankers Ready</p></div>
+      <div class="metric"><h3>15 min</h3><p>Avg Delivery</p></div>
+      <div class="metric"><h3>4.9★</h3><p>Avg Rating</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right">
+  <div class="fb">
+    <div class="fh">
+      <h2 id="fTitle">Welcome Back 👋</h2>
+      <p id="fSub">Sign in to your account</p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab on" id="tabLogin"    onclick="showTab('login')">Sign In</button>
+      <button class="tab"    id="tabRegister" onclick="showTab('register')">Register</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginSec">
+      <div class="alert err" id="loginErr"></div>
+      <div class="alert ok"  id="loginOk"></div>
+      <div class="field"><label>Email Address</label><input type="email" id="lEmail" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="lPass" placeholder="Your password"/></div>
+      <div class="forgot"><a href="#">Forgot password?</a></div>
+      <button class="btn-sub" id="loginBtn" onclick="doLogin()">Sign In →</button>
+      <div class="sw">No account? <a onclick="showTab('register')">Create one free</a></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="regSec" style="display:none">
+      <div class="alert err" id="regErr"></div>
+      <div class="field"><label>Full Name</label><input type="text" id="rName" placeholder="Ravi Kumar"/></div>
+      <div class="field"><label>Phone Number</label><input type="tel" id="rPhone" placeholder="9876543210"/></div>
+      <div class="field"><label>City</label><input type="text" id="rCity" placeholder="Mangalore"/></div>
+      <div class="field"><label>Email Address</label><input type="email" id="rEmail" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password (min 6 chars)</label><input type="password" id="rPass" placeholder="Create a password"/></div>
+      <button class="btn-sub" id="regBtn" onclick="doRegister()">Create Account →</button>
+      <div class="sw">Already registered? <a onclick="showTab('login')">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Initialize DB then check session ─────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  await initDB();
+  if (getSession()) window.location.href = 'dashboard.html';
+});
+
+// ── Tab switching ─────────────────────────────────────────────
+function showTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('tabLogin').classList.toggle('on', isLogin);
+  document.getElementById('tabRegister').classList.toggle('on', !isLogin);
+  document.getElementById('loginSec').style.display = isLogin ? 'block' : 'none';
+  document.getElementById('regSec').style.display   = isLogin ? 'none'  : 'block';
+  document.getElementById('fTitle').textContent = isLogin ? 'Welcome Back 👋' : 'Create Account 🚀';
+  document.getElementById('fSub').textContent   = isLogin ? 'Sign in to your account' : 'Register to get started';
+}
+
+// ── Alert helpers ─────────────────────────────────────────────
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `alert ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// ── Login ─────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('lEmail').value.trim();
+  const pass  = document.getElementById('lPass').value;
+  const btn   = document.getElementById('loginBtn');
+
+  if (!email || !pass) { showAlert('loginErr','⚠️ Please fill in all fields.','err'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Signing in...';
+
+  // Small delay for UX feel
+  await new Promise(r => setTimeout(r, 600));
+
+  const result = loginUser(email, pass);
+  if (!result.success) {
+    showAlert('loginErr', '❌ ' + result.error, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Sign In →';
+    return;
+  }
+
+  setSession(result.user);
+  showAlert('loginOk', '✅ Login successful! Redirecting...', 'ok');
+  setTimeout(() => window.location.href = 'dashboard.html', 1000);
+}
+
+// ── Register ──────────────────────────────────────────────────
+async function doRegister() {
+  const name  = document.getElementById('rName').value.trim();
+  const phone = document.getElementById('rPhone').value.trim();
+  const city  = document.getElementById('rCity').value.trim();
+  const email = document.getElementById('rEmail').value.trim();
+  const pass  = document.getElementById('rPass').value;
+  const btn   = document.getElementById('regBtn');
+
+  if (!name || !email || !pass || !phone) { showAlert('regErr','⚠️ Please fill all required fields.','err'); return; }
+  if (pass.length < 6) { showAlert('regErr','⚠️ Password must be at least 6 characters.','err'); return; }
+  if (!/\S+@\S+\.\S+/.test(email)) { showAlert('regErr','⚠️ Please enter a valid email address.','err'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Creating account...';
+
+  await new Promise(r => setTimeout(r, 600));
+
+  const result = registerUser(name, email, phone, city, pass);
+  if (!result.success) {
+    showAlert('regErr', '❌ ' + result.error, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Create Account →';
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Create Account →';
+  showTab('login');
+  showAlert('loginOk', '✅ Account created! Please sign in.', 'ok');
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const isLogin = document.getElementById('loginSec').style.display !== 'none';
+  if (isLogin) doLogin(); else doRegister();
+});
+</script>
+</body>
+</html>

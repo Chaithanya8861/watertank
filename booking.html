@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WaterTank – Book Tanker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+  <script src="js/db.js"></script>
+  <style>
+    :root{
+      --deep:#060d1a;--card:#0b1929;--border:rgba(255,255,255,.07);
+      --cyan:#00c2d4;--white:#f0f6ff;--gray:#7a9bb5;
+      --green:#22c55e;--red:#f43f5e;--yellow:#fbbf24;
+      --purple:#a78bfa;--orange:#f97316;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'DM Sans',sans-serif;background:var(--deep);color:var(--white);min-height:100vh}
+
+    nav{display:flex;align-items:center;justify-content:space-between;padding:0 44px;height:66px;background:rgba(6,13,26,.95);border-bottom:1px solid var(--border);backdrop-filter:blur(14px)}
+    .logo{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;text-decoration:none;color:var(--white)}
+    .logo em{color:var(--cyan);font-style:normal}
+    .btn-back{padding:8px 18px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--gray);font-size:13px;text-decoration:none;transition:all .2s;font-family:'DM Sans',sans-serif}
+    .btn-back:hover{color:var(--white);border-color:rgba(255,255,255,.2)}
+
+    .page{display:grid;grid-template-columns:1fr 390px;gap:26px;padding:38px 44px;max-width:1140px;margin:0 auto}
+    .sec-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:22px}
+
+    .tbar{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;display:flex;align-items:center;gap:18px;margin-bottom:20px}
+    .tic{width:58px;height:58px;background:linear-gradient(135deg,rgba(0,194,212,.2),rgba(2,132,199,.25));border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:27px;flex-shrink:0}
+    .ti h3{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:4px}
+    .ti p{color:var(--cyan);font-size:13px;font-family:monospace}
+    .ti small{color:var(--gray);font-size:12px;display:block;margin-top:3px}
+
+    .fc{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;margin-bottom:18px}
+    .fc h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--cyan);margin-bottom:18px}
+
+    .lscr{text-align:center;margin-bottom:16px;background:rgba(0,194,212,.07);border:1px solid rgba(0,194,212,.18);border-radius:13px;padding:15px}
+    .lv{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:var(--cyan)}
+    .lu{color:var(--gray);font-size:16px}
+    input[type=range]{width:100%;height:5px;-webkit-appearance:none;background:rgba(255,255,255,.1);border-radius:10px;outline:none;cursor:pointer}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:var(--cyan);border-radius:50%;border:3px solid var(--deep);box-shadow:0 0 8px rgba(0,194,212,.5)}
+    .lr{display:flex;justify-content:space-between;color:var(--gray);font-size:12px;margin-top:5px}
+    .qrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+    .qb{padding:7px 14px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .qb:hover,.qb.on{background:rgba(0,194,212,.1);border-color:rgba(0,194,212,.4);color:var(--cyan)}
+
+    .field{margin-bottom:16px}
+    .field label{display:block;color:var(--gray);font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px}
+    .field input,.field select,.field textarea{width:100%;padding:12px 15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:11px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:all .25s}
+    .field select option{background:#0b1929}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--cyan);background:rgba(0,194,212,.05);box-shadow:0 0 0 3px rgba(0,194,212,.1)}
+    .field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.22)}
+    .field textarea{resize:vertical;min-height:78px}
+
+    .popts{display:flex;flex-direction:column;gap:9px}
+    .popt{display:flex;align-items:center;gap:12px;padding:13px 15px;background:rgba(255,255,255,.03);border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .2s}
+    .popt:hover{border-color:rgba(0,194,212,.3);background:rgba(0,194,212,.04)}
+    .popt.on{border-color:var(--cyan);background:rgba(0,194,212,.07)}
+    .pico{font-size:21px;width:32px;text-align:center}
+    .plbl{flex:1}
+    .pnm{font-weight:600;font-size:14px}
+    .psb{color:var(--gray);font-size:12px}
+    .rdot{width:17px;height:17px;border-radius:50%;border:2px solid var(--border);transition:all .2s;flex-shrink:0}
+    .popt.on .rdot{border-color:var(--cyan);background:var(--cyan);box-shadow:0 0 0 3px rgba(0,194,212,.2)}
+
+    /* ORDER SUMMARY */
+    .sbox{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;position:sticky;top:76px}
+    .sbox h3{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:22px}
+    .pr{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+    .prl{color:var(--gray)}.prv{font-weight:600}
+    .total{background:rgba(0,194,212,.06);border:1px solid rgba(0,194,212,.15);border-radius:10px;padding:13px 15px;margin-top:10px;display:flex;justify-content:space-between}
+    .total .tl{font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+    .total .tv{font-family:'Syne',sans-serif;color:var(--cyan);font-size:22px;font-weight:800}
+    .err{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);color:var(--red);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:12px;display:none}
+    .err.show{display:block}
+    .btn-pay{width:100%;padding:15px;margin-top:14px;background:linear-gradient(135deg,var(--cyan),#0094a8);border:none;border-radius:12px;color:#060d1a;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.4px;transition:all .2s}
+    .btn-pay:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,194,212,.4)}
+    .safe{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;color:var(--gray);font-size:12px}
+    /* ── ORDER UNAVAILABLE OVERLAY ── */
+    .unavail-overlay{position:fixed;inset:0;background:rgba(6,13,26,.97);z-index:888;display:none;align-items:center;justify-content:center;padding:20px}
+    .unavail-overlay.show{display:flex}
+    .unavail-card{background:#0b1929;border:2px solid rgba(244,63,94,.35);border-radius:24px;padding:48px 40px;max-width:460px;width:100%;text-align:center;animation:popIn .4s cubic-bezier(.175,.885,.32,1.275)}
+    @keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+    .unavail-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--red),transparent);border-radius:24px 24px 0 0}
+    .unavail-card{position:relative}
+    .unavail-icon{font-size:64px;margin-bottom:16px;display:block}
+    .unavail-card h2{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;margin-bottom:10px;color:var(--red)}
+    .unavail-card .uv-sub{color:var(--gray);font-size:14px;line-height:1.6;margin-bottom:24px}
+    .unavail-card .uv-sub b{color:var(--white)}
+    .service-areas{background:rgba(0,194,212,.06);border:1px solid rgba(0,194,212,.15);border-radius:12px;padding:16px;margin-bottom:24px;text-align:left}
+    .service-areas p{color:var(--cyan);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+    .area-tags{display:flex;flex-wrap:wrap;gap:6px}
+    .area-tag{padding:4px 10px;background:rgba(0,194,212,.1);border:1px solid rgba(0,194,212,.2);border-radius:6px;color:var(--cyan);font-size:12px}
+    .btn-goback-dash{width:100%;padding:14px;background:linear-gradient(135deg,var(--cyan),#0094a8);border:none;border-radius:12px;color:#060d1a;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;margin-bottom:10px}
+    .btn-goback-dash:hover{box-shadow:0 6px 20px rgba(0,194,212,.35)}
+    .btn-try-again{width:100%;padding:12px;background:none;border:1px solid var(--border);border-radius:12px;color:var(--gray);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all .2s}
+    .btn-try-again:hover{color:var(--white);border-color:rgba(255,255,255,.2)}
+
+    /* ═══ MODAL ═══ */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;z-index:999;opacity:0;pointer-events:none;transition:opacity .3s;padding:16px}
+    .overlay.open{opacity:1;pointer-events:all}
+    .modal{background:#0b1929;border:1px solid rgba(0,194,212,.2);border-radius:24px;padding:30px 28px;max-width:460px;width:100%;text-align:center;transform:scale(.92);transition:transform .3s;max-height:92vh;overflow-y:auto}
+    .overlay.open .modal{transform:scale(1)}
+
+    /* Steps bar */
+    .stepbar{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:22px}
+    .sdot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all .3s;flex-shrink:0;border:2px solid}
+    .sdot.idle{background:rgba(255,255,255,.04);color:var(--gray);border-color:var(--border)}
+    .sdot.active{background:var(--cyan);color:#060d1a;border-color:var(--cyan);box-shadow:0 0 0 4px rgba(0,194,212,.18)}
+    .sdot.done{background:var(--green);color:#fff;border-color:var(--green)}
+    .sline{flex:1;height:2px;max-width:48px;margin:0 6px;transition:background .3s;background:var(--border)}
+    .sline.done{background:var(--green)}
+    .slabels{display:flex;justify-content:space-around;margin-top:5px}
+    .slabels span{font-size:11px;color:var(--gray)}
+
+    /* Modal typography */
+    .modal h3{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;margin-bottom:4px}
+    .mamt{font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:var(--cyan);margin:8px 0}
+    .msub{color:var(--gray);font-size:13px;margin-bottom:16px}
+
+    /* Payment method tabs in modal */
+    .mtabs{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-bottom:18px}
+    .mtab{padding:7px 13px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--gray);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;display:flex;align-items:center;gap:5px}
+    .mtab.on{border-color:rgba(0,194,212,.5);background:rgba(0,194,212,.1);color:var(--white)}
+
+    /* QR box */
+    .qr-outer{background:#fff;border-radius:16px;width:192px;height:192px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .qr-outer canvas,.qr-outer img{display:block}
+    .qr-badge{position:absolute;bottom:0;left:0;right:0;padding:5px;font-size:11px;font-weight:700;text-align:center;color:#fff}
+    .qr-badge.gpay{background:#1a73e8}.qr-badge.phonepe{background:#5f259f}
+    .qr-badge.paytm{background:#002970}.qr-badge.anyupi{background:#f97316}
+
+    /* UPI row */
+    .upi-row{display:flex;align-items:center;justify-content:space-between;background:rgba(0,194,212,.07);border:1px solid rgba(0,194,212,.2);border-radius:10px;padding:11px 14px;margin-bottom:12px}
+    .upi-row .ul{color:var(--gray);font-size:11px}
+    .upi-row .uv{font-family:monospace;color:var(--cyan);font-size:14px;font-weight:700}
+    .copybtn{padding:5px 11px;background:rgba(0,194,212,.15);border:1px solid rgba(0,194,212,.3);border-radius:7px;color:var(--cyan);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .copybtn:hover{background:rgba(0,194,212,.28)}
+
+    /* Open app link */
+    .applink{display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:11px;color:var(--white);font-size:14px;font-weight:600;text-decoration:none;transition:all .2s;margin-bottom:8px;font-family:'DM Sans',sans-serif}
+    .applink:hover{background:rgba(255,255,255,.09)}
+    .divider{display:flex;align-items:center;gap:10px;color:var(--gray);font-size:12px;margin:12px 0}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* I Paid button (step 1) */
+    .btn-ipaid{width:100%;padding:13px;background:linear-gradient(135deg,var(--green),#15803d);border:none;border-radius:12px;color:#fff;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+    .btn-ipaid:hover{box-shadow:0 6px 20px rgba(34,197,94,.35)}
+
+    /* Cancel link */
+    .btn-cncl{background:none;border:none;color:var(--gray);font-size:13px;cursor:pointer;margin-top:9px;text-decoration:underline;font-family:'DM Sans',sans-serif;display:block;width:100%}
+
+    /* ═══ STEP 2: RECEIPT UPLOAD ═══ */
+    .receipt-warn{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:11px;padding:12px 14px;margin-bottom:16px;text-align:left}
+    .receipt-warn p{font-size:13px;color:var(--yellow)}
+    .receipt-warn p b{font-weight:700}
+
+    /* Drop zone */
+    .dropzone{border:2px dashed rgba(0,194,212,.3);border-radius:14px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .3s;position:relative;margin-bottom:14px;background:rgba(255,255,255,.01)}
+    .dropzone:hover,.dropzone.drag{border-color:var(--cyan);background:rgba(0,194,212,.04)}
+    .dropzone.filled{border-color:var(--green);background:rgba(34,197,94,.04)}
+    .dropzone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .dz-icon{font-size:38px;margin-bottom:8px}
+    .dz-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px}
+    .dz-sub{color:var(--gray);font-size:12px}
+
+    /* Image preview */
+    .prev-box{display:none;position:relative;margin-bottom:14px}
+    .prev-box.show{display:block}
+    .prev-box img{width:100%;max-height:180px;object-fit:contain;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03)}
+    .remove-btn{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;background:rgba(244,63,94,.85);border:none;color:#fff;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+
+    /* TXN field */
+    .txn-field label{display:block;color:var(--gray);font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px;text-align:left}
+    .txn-field input{width:100%;padding:12px 15px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:11px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:all .25s;margin-bottom:14px}
+    .txn-field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.1)}
+    .txn-field input::placeholder{color:rgba(255,255,255,.2)}
+
+    .rerr{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);color:var(--red);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:12px;display:none}
+    .rerr.show{display:block}
+
+    .btn-confirm{width:100%;padding:14px;background:linear-gradient(135deg,var(--green),#15803d);border:none;border-radius:12px;color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+    .btn-confirm:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(34,197,94,.4)}
+    .btn-confirm:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+    .btn-goback{width:100%;margin-top:9px;padding:11px;background:none;border:1px solid var(--border);border-radius:11px;color:var(--gray);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .btn-goback:hover{color:var(--white);border-color:rgba(255,255,255,.2)}
+
+    .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .65s linear infinite;vertical-align:middle;margin-right:6px}
+    @keyframes sp{to{transform:rotate(360deg)}}
+
+    @media(max-width:820px){.page{grid-template-columns:1fr;padding:22px 18px}nav{padding:0 20px}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="dashboard.html">💧 Water<em>Tank</em></a>
+  <a href="dashboard.html" class="btn-back">← Back to Tankers</a>
+</nav>
+
+<div class="page">
+  <!-- LEFT: BOOKING FORM -->
+  <div>
+    <div class="sec-title">📋 Complete Your Booking</div>
+
+    <div class="tbar">
+      <div class="tic">🚛</div>
+      <div class="ti">
+        <h3 id="tName">Loading...</h3>
+        <p  id="tVehicle">—</p>
+        <small id="tInfo">—</small>
+      </div>
+    </div>
+
+    <div class="fc">
+      <h3>💧 Select Water Quantity</h3>
+      <div class="lscr"><span class="lv" id="lvD">1,000</span><span class="lu"> Liters</span></div>
+      <input type="range" id="sldr" min="500" max="10000" step="500" value="1000" oninput="upd(this.value)"/>
+      <div class="lr"><span>500 L</span><span id="maxL">10,000 L</span></div>
+      <div class="qrow" id="qrow"></div>
+    </div>
+
+    <div class="fc">
+      <h3>📍 Delivery Details</h3>
+      <div class="field">
+        <label>Delivery Address</label>
+        <textarea id="addr" placeholder="House No., Street, Landmark..."></textarea>
+      </div>
+
+      <!-- PINCODE SELECTOR -->
+      <div class="field">
+        <label>📍 Area &amp; Pincode <span style="color:var(--red);font-size:13px">*</span></label>
+        <div style="position:relative">
+          <input type="text" id="pinSearch" placeholder="Type area name or pincode to search..." oninput="filterPins(this.value)" onfocus="openPinDrop()" autocomplete="off" style="padding-right:44px"/>
+          <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none" id="pinIcon">📍</span>
+        </div>
+        <div id="pinDrop" style="display:none;background:#0d1f38;border:1px solid rgba(0,194,212,.25);border-radius:12px;margin-top:6px;max-height:230px;overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,.5)"></div>
+        <div id="pinSelected" style="display:none;margin-top:8px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">✅</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--green)" id="pinSelArea">—</div>
+            <div style="font-size:12px;color:var(--gray)" id="pinSelCode">—</div>
+          </div>
+          <button onclick="clearPin()" style="margin-left:auto;background:none;border:none;color:var(--gray);font-size:18px;cursor:pointer;line-height:1">×</button>
+        </div>
+        <div id="pinErr" style="display:none;margin-top:8px;background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);border-radius:10px;padding:9px 13px;font-size:13px;color:var(--red)">
+          ⚠️ Please select a valid Mangalore area and pincode.
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Preferred Time Slot</label>
+        <select id="tslot">
+          <option value="">-- Select Time Slot --</option>
+          <option>Morning (6 AM – 10 AM)</option>
+          <option>Midday (10 AM – 2 PM)</option>
+          <option>Afternoon (2 PM – 6 PM)</option>
+          <option>Evening (6 PM – 9 PM)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fc">
+      <h3>💳 Payment Method</h3>
+      <div class="popts">
+        <div class="popt on" onclick="setPay(this,'googlepay')"><div class="pico">🟢</div><div class="plbl"><div class="pnm">Google Pay</div><div class="psb">Scan GPay QR code</div></div><div class="rdot"></div></div>
+        <div class="popt" onclick="setPay(this,'phonepe')"><div class="pico">💜</div><div class="plbl"><div class="pnm">PhonePe</div><div class="psb">Scan PhonePe QR code</div></div><div class="rdot"></div></div>
+        <div class="popt" onclick="setPay(this,'paytm')"><div class="pico">🔵</div><div class="plbl"><div class="pnm">Paytm</div><div class="psb">Scan Paytm QR code</div></div><div class="rdot"></div></div>
+        <div class="popt" onclick="setPay(this,'anyupi')"><div class="pico">📱</div><div class="plbl"><div class="pnm">Any UPI App</div><div class="psb">Universal UPI QR code</div></div><div class="rdot"></div></div>
+        <div class="popt" onclick="setPay(this,'cash')"><div class="pico">💵</div><div class="plbl"><div class="pnm">Cash on Delivery</div><div class="psb">Pay when tanker arrives</div></div><div class="rdot"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: SUMMARY -->
+  <div>
+    <div class="sbox">
+      <h3>🧾 Order Summary</h3>
+      <div class="pr"><span class="prl">Driver</span><span class="prv" id="sDriver">—</span></div>
+      <div class="pr"><span class="prl">Quantity</span><span class="prv" id="sL">1,000 L</span></div>
+      <div class="pr"><span class="prl">Rate</span><span class="prv" id="sRate">—</span></div>
+      <div class="pr"><span class="prl">Water Cost</span><span class="prv" id="sW">—</span></div>
+      <div class="pr"><span class="prl">Delivery Fee</span><span class="prv">₹50.00</span></div>
+      <div class="pr"><span class="prl">GST (5%)</span><span class="prv" id="sG">—</span></div>
+      <div class="total"><span class="tl">Total</span><span class="tv" id="sT">—</span></div>
+      <div class="err" id="errB"></div>
+      <button class="btn-pay" onclick="handlePay()">💳 Proceed to Payment</button>
+      <div class="safe">🔒 100% Secure Transaction</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     ORDER UNAVAILABLE OVERLAY
+═══════════════════════════════════════ -->
+<div class="unavail-overlay" id="unavailOverlay">
+  <div class="unavail-card">
+    <span class="unavail-icon">🚫</span>
+    <h2>Order Unavailable</h2>
+    <p class="uv-sub">
+      Sorry! Our water tanker service is available <b>only within Mangalore city limits</b>.<br/><br/>
+      The address you entered appears to be <b>outside our service area</b>.
+    </p>
+    <div class="service-areas">
+      <p>📍 We serve these areas in Mangalore</p>
+      <div class="area-tags">
+        <span class="area-tag">Bejai</span><span class="area-tag">Kadri</span>
+        <span class="area-tag">Hampankatta</span><span class="area-tag">Bunder</span>
+        <span class="area-tag">Kankanady</span><span class="area-tag">Bondel</span>
+        <span class="area-tag">Ullal</span><span class="area-tag">Surathkal</span>
+        <span class="area-tag">Panambur</span><span class="area-tag">Kottara</span>
+        <span class="area-tag">Adyar</span><span class="area-tag">Kulur</span>
+        <span class="area-tag">Derebail</span><span class="area-tag">Bajpe</span>
+        <span class="area-tag">Attavar</span><span class="area-tag">+ more</span>
+      </div>
+    </div>
+    <button class="btn-goback-dash" onclick="location.href='dashboard.html'">← Back to Dashboard</button>
+    <button class="btn-try-again" onclick="document.getElementById('unavailOverlay').classList.remove('show'); document.getElementById('addr').focus()">✏️ Change Delivery Address</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PAYMENT MODAL  (2 steps)
+═══════════════════════════════════════ -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+
+    <!-- Step indicator -->
+    <div class="stepbar">
+      <div class="sdot active" id="sd1">1</div>
+      <div class="sline" id="sl12"></div>
+      <div class="sdot idle" id="sd2">2</div>
+    </div>
+    <div class="slabels">
+      <span>Scan &amp; Pay</span>
+      <span>Upload Receipt</span>
+    </div>
+
+    <!-- ── STEP 1: QR ── -->
+    <div id="step1">
+      <h3 id="s1title">Scan QR to Pay</h3>
+      <div class="mamt" id="mAmt">₹0</div>
+      <p class="msub">Open your payment app → Scan → Pay the amount</p>
+
+      <!-- Tabs to switch method -->
+      <div class="mtabs" id="mtabs">
+        <div class="mtab on" data-m="googlepay" onclick="switchMethod(this,'googlepay')">🟢 GPay</div>
+        <div class="mtab" data-m="phonepe"  onclick="switchMethod(this,'phonepe')">💜 PhonePe</div>
+        <div class="mtab" data-m="paytm"    onclick="switchMethod(this,'paytm')">🔵 Paytm</div>
+        <div class="mtab" data-m="anyupi"   onclick="switchMethod(this,'anyupi')">📱 Any UPI</div>
+      </div>
+
+      <!-- QR code display -->
+      <div class="qr-outer" id="qrOuter">
+        <div id="qrCanvas"></div>
+        <div class="qr-badge gpay" id="qrBadge">GOOGLE PAY</div>
+      </div>
+
+      <!-- UPI ID copy row -->
+      <div class="upi-row">
+        <div>
+          <div class="ul">UPI ID</div>
+          <div class="uv" id="upiDisp">yourname@okicici</div>
+        </div>
+        <button class="copybtn" onclick="copyUpi()">📋 Copy</button>
+      </div>
+
+      <!-- Open app deep link -->
+      <a id="appLink" href="#" target="_blank" class="applink">
+        <span id="appIco">🟢</span> Open <span id="appName">Google Pay</span> App
+      </a>
+
+      <div class="divider">after paying, click below</div>
+
+      <button class="btn-ipaid" onclick="goStep2()">✅ I Have Paid — Upload Receipt</button>
+      <button class="btn-cncl" onclick="closeModal()">Cancel Payment</button>
+    </div>
+
+    <!-- ── STEP 2: RECEIPT UPLOAD ── -->
+    <div id="step2" style="display:none">
+      <h3>📎 Upload Payment Receipt</h3>
+      <p class="msub" style="margin-bottom:16px">Proof of payment is required to confirm your booking</p>
+
+      <div class="receipt-warn">
+        <p>⚠️ <b>Required:</b> Please upload a screenshot or photo of your successful payment. Admin will verify before dispatching the tanker.</p>
+      </div>
+
+      <!-- Preview -->
+      <div class="prev-box" id="prevBox">
+        <img id="prevImg" src="" alt="Receipt"/>
+        <button class="remove-btn" onclick="clearReceipt()">✕</button>
+      </div>
+
+      <!-- Drop zone -->
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileIn').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="dropFile(event)">
+        <input type="file" id="fileIn" accept="image/*,.pdf" style="display:none" onchange="pickFile(event)"/>
+        <div class="dz-icon" id="dzIco">📷</div>
+        <div class="dz-title" id="dzTitle">Tap to upload receipt</div>
+        <div class="dz-sub" id="dzSub">Screenshot, photo or PDF • Max 5MB</div>
+      </div>
+
+      <!-- Transaction ID -->
+      <div class="txn-field">
+        <label>Transaction / UTR Reference No. (Optional)</label>
+        <input type="text" id="txnRef" placeholder="e.g. 407812345678"/>
+      </div>
+
+      <div class="rerr" id="rerr"></div>
+
+      <button class="btn-confirm" id="btnConfirm" onclick="confirmBooking()">✅ Confirm Booking</button>
+      <button class="btn-goback" onclick="goStep1()">← Back to Payment</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ══════════════════════════════════════════
+  // YOUR UPI DETAILS — CHANGE THESE
+  // ══════════════════════════════════════════
+  const MY_UPI  = 'yourname@okicici';   // ← your UPI ID
+  const MY_NAME = 'WaterTank Supplier'; // ← your name
+  // ══════════════════════════════════════════
+
+  const METHODS = {
+    googlepay : { label:'Google Pay', icon:'🟢', badge:'gpay',    badgeText:'GOOGLE PAY',  appUrl:(u,n,a,t)=>`tez://upi/pay?pa=${u}&pn=${n}&am=${a}&cu=INR&tn=${t}` },
+    phonepe   : { label:'PhonePe',    icon:'💜', badge:'phonepe', badgeText:'PHONEPE',     appUrl:(u,n,a,t)=>`phonepe://pay?pa=${u}&pn=${n}&am=${a}&cu=INR&tn=${t}` },
+    paytm     : { label:'Paytm',      icon:'🔵', badge:'paytm',  badgeText:'PAYTM',       appUrl:(u,n,a,t)=>`paytmmp://pay?pa=${u}&pn=${n}&am=${a}&cu=INR&tn=${t}` },
+    anyupi    : { label:'Any UPI App',icon:'📱', badge:'anyupi', badgeText:'UPI PAYMENT', appUrl:(u,n,a,t)=>`upi://pay?pa=${u}&pn=${n}&am=${a}&cu=INR&tn=${t}` },
+  };
+
+  let tanker    = null;
+  let liters    = 1000;
+  let payMode   = 'googlepay';
+  let modalMode = 'googlepay';
+  let receiptB64 = null;
+
+  // ── INIT ────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    await initDB();
+    requireLogin();
+    const id = parseInt(new URLSearchParams(window.location.search).get('id'));
+    if (!id) { location.href='dashboard.html'; return; }
+    tanker = getTanker(id);
+    if (!tanker) { location.href='dashboard.html'; return; }
+
+    document.getElementById('tName').textContent    = tanker.driver_name;
+    document.getElementById('tVehicle').textContent = tanker.vehicle_number;
+    document.getElementById('tInfo').textContent    = `Max ${tanker.capacity_liters.toLocaleString()} L · ₹${tanker.price_per_liter}/liter · ${tanker.city}`;
+    document.getElementById('sDriver').textContent  = tanker.driver_name;
+    document.getElementById('sRate').textContent    = `₹${tanker.price_per_liter}/L`;
+    document.getElementById('sldr').max = tanker.capacity_liters;
+    document.getElementById('maxL').textContent = tanker.capacity_liters.toLocaleString()+' L';
+
+    const qrow = document.getElementById('qrow');
+    [1000,2000,3000,5000,8000,10000].forEach(q => {
+      if (q <= tanker.capacity_liters) {
+        const b = document.createElement('button');
+        b.type='button'; b.className='qb'; b.textContent=q.toLocaleString()+' L';
+        b.onclick = () => { document.querySelectorAll('.qb').forEach(x=>x.classList.remove('on')); b.classList.add('on'); upd(q); };
+        qrow.appendChild(b);
+      }
+    });
+    upd(1000);
+  });
+
+  // ── LITER / PRICE ────────────────────────────────
+  function upd(v) {
+    liters = parseInt(v);
+    document.getElementById('sldr').value = liters;
+    document.getElementById('lvD').textContent = liters.toLocaleString();
+    document.getElementById('sL').textContent  = liters.toLocaleString()+' L';
+    if (!tanker) return;
+    const w=liters*tanker.price_per_liter, d=50, g=(w+d)*.05, tot=w+d+g;
+    document.getElementById('sW').textContent = '₹'+w.toFixed(2);
+    document.getElementById('sG').textContent = '₹'+g.toFixed(2);
+    document.getElementById('sT').textContent = '₹'+tot.toFixed(2);
+  }
+  function getTotal(){ const w=liters*tanker.price_per_liter,d=50,g=(w+d)*.05; return (w+d+g).toFixed(2); }
+
+  // ── PAYMENT METHOD SELECT ─────────────────────────
+  function setPay(el, m) {
+    document.querySelectorAll('.popt').forEach(p=>p.classList.remove('on'));
+    el.classList.add('on'); payMode = m;
+  }
+
+  function showErr(msg){ const e=document.getElementById('errB'); e.textContent=msg; e.className='err show'; setTimeout(()=>e.classList.remove('show'),4000); }
+
+  // ══════════════════════════════════════════════════════
+  // MANGALORE PINCODE DATA — all 31 pincodes
+  // ══════════════════════════════════════════════════════
+  const MNG_PINS = [
+    { pin:'575001', areas:['Hampankatta','Bunder','Milagres','Mangaladevi','Attavar','Pandeshwar','Carstreet','City Centre'] },
+    { pin:'575002', areas:['Balmatta','Falnir','Kankanady'] },
+    { pin:'575003', areas:['Kankanady','Ballalbagh','Kodialbail','Mallikatta'] },
+    { pin:'575004', areas:['Bejai','Kadri','Kapikad'] },
+    { pin:'575005', areas:['Mangalore Airport','Kenjar','Airport'] },
+    { pin:'575006', areas:['Derebail','Kottara'] },
+    { pin:'575007', areas:['Adyar','Jeppinamogaru','Kannur','Bajal'] },
+    { pin:'575008', areas:['Bondel','Kavoor'] },
+    { pin:'575009', areas:['Panambur','Baikampady'] },
+    { pin:'575010', areas:['Surathkal','Kulai'] },
+    { pin:'575011', areas:['Jokatte','Panambur North'] },
+    { pin:'575012', areas:['Baikampady Industrial Estate','KIADB'] },
+    { pin:'575013', areas:['Mulki'] },
+    { pin:'575014', areas:['Haleyangadi'] },
+    { pin:'575015', areas:['Katipalla'] },
+    { pin:'575016', areas:['Ullal','Ullal Beach'] },
+    { pin:'575017', areas:['Someshwar'] },
+    { pin:'575018', areas:['Derlakatte','Deralakatte','NITTE'] },
+    { pin:'575019', areas:['Kulai','Kulai Main'] },
+    { pin:'575020', areas:['Mangalore University','Konaje'] },
+    { pin:'575021', areas:['Mudipu'] },
+    { pin:'575022', areas:['Thokur'] },
+    { pin:'575023', areas:['Pachanady'] },
+    { pin:'575024', areas:['Kinnigoli'] },
+    { pin:'575025', areas:['Kateel'] },
+    { pin:'575026', areas:['Elinje'] },
+    { pin:'575027', areas:['Moodbidri'] },
+    { pin:'575028', areas:['Paladka'] },
+    { pin:'575029', areas:['Kallamundkur'] },
+    { pin:'575030', areas:['Shirthady'] },
+    { pin:'574243', areas:['Shirthady Village','Bantwal Taluk'] },
+  ];
+
+  let selectedPin  = null;   // { pin, area } set when user picks from dropdown
+  let pinDropOpen  = false;
+
+  // Build flat searchable list: [ { pin, area, display } ]
+  const PIN_LIST = [];
+  MNG_PINS.forEach(p => p.areas.forEach(a => PIN_LIST.push({ pin: p.pin, area: a, display: `${a} — ${p.pin}` })));
+
+  // ── PINCODE DROPDOWN FUNCTIONS ────────────────────
+  function openPinDrop() {
+    filterPins(document.getElementById('pinSearch').value);
+  }
+
+  function filterPins(q) {
+    const drop = document.getElementById('pinDrop');
+    const s    = q.trim().toLowerCase();
+    const list = s.length === 0
+      ? PIN_LIST
+      : PIN_LIST.filter(p => p.area.toLowerCase().includes(s) || p.pin.includes(s));
+
+    if (!list.length) {
+      drop.innerHTML = `<div style="padding:16px;text-align:center;color:var(--gray);font-size:13px">No area found for "<b>${q}</b>"</div>`;
+    } else {
+      drop.innerHTML = list.map(p => `
+        <div onclick="selectPin('${p.pin}','${p.area.replace(/'/g,"\\'")}',this)"
+             style="padding:12px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.05);transition:background .15s;display:flex;align-items:center;gap:10px"
+             onmouseover="this.style.background='rgba(0,194,212,.08)'"
+             onmouseout="this.style.background='transparent'">
+          <span style="font-size:16px">📍</span>
+          <div>
+            <div style="font-weight:600;font-size:14px;color:var(--white)">${p.area}</div>
+            <div style="font-size:12px;color:var(--cyan);font-family:monospace">${p.pin} · Mangalore</div>
+          </div>
+        </div>`).join('');
+    }
+    drop.style.display = 'block';
+    pinDropOpen = true;
+  }
+
+  function selectPin(pin, area) {
+    selectedPin = { pin, area };
+    // Hide dropdown, show selected chip, clear search
+    document.getElementById('pinDrop').style.display    = 'none';
+    document.getElementById('pinSelected').style.display = 'flex';
+    document.getElementById('pinSelArea').textContent   = area;
+    document.getElementById('pinSelCode').textContent   = pin + ' · Mangalore, Karnataka';
+    document.getElementById('pinSearch').value          = '';
+    document.getElementById('pinIcon').textContent      = '✅';
+    document.getElementById('pinErr').style.display     = 'none';
+    pinDropOpen = false;
+  }
+
+  function clearPin() {
+    selectedPin = null;
+    document.getElementById('pinSelected').style.display = 'none';
+    document.getElementById('pinSearch').value           = '';
+    document.getElementById('pinIcon').textContent       = '📍';
+    document.getElementById('pinDrop').style.display     = 'none';
+    pinDropOpen = false;
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('pinSearch').closest('.field');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('pinDrop').style.display = 'none';
+      pinDropOpen = false;
+    }
+  });
+
+  // ── SERVICE AREA CHECK (uses pincode) ─────────────
+  function isInMangalore() {
+    return selectedPin !== null;
+  }
+
+  // ── OPEN MODAL ────────────────────────────────────
+  function handlePay() {
+    const addr = document.getElementById('addr').value.trim();
+    const ts   = document.getElementById('tslot').value;
+    if (!addr) { showErr('⚠️ Please enter your delivery address.'); return; }
+    if (!ts)   { showErr('⚠️ Please select a time slot.'); return; }
+
+    // ── PINCODE CHECK ──
+    if (!selectedPin) {
+      document.getElementById('pinErr').style.display = 'block';
+      document.getElementById('pinSearch').focus();
+      showErr('⚠️ Please select your area and pincode.');
+      return;
+    }
+
+    const pinInfo  = `, ${selectedPin.area} - ${selectedPin.pin}, Mangalore`;
+    const fullAddr = addr + pinInfo;
+    sessionStorage.setItem('bk_addr', fullAddr);
+    sessionStorage.setItem('bk_ts',   ts);
+
+    if (payMode === 'cash') { doSave(addr, ts, 'Cash on Delivery', null, ''); return; }
+
+    // Open modal at step 1
+    goStep1();
+    const activeTab = document.querySelector(`.mtab[data-m="${payMode}"]`) || document.querySelector('.mtab');
+    if(activeTab){ document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('on')); activeTab.classList.add('on'); }
+    buildQR(payMode);
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  // ── BUILD QR CODE ─────────────────────────────────
+  function buildQR(method) {
+    modalMode = method;
+    const m    = METHODS[method];
+    const tot  = getTotal();
+    const note = encodeURIComponent('Water Tanker Booking');
+    const nm   = encodeURIComponent(MY_NAME);
+    const upiStr = `upi://pay?pa=${MY_UPI}&pn=${nm}&am=${tot}&cu=INR&tn=${note}`;
+
+    // Clear old QR
+    const container = document.getElementById('qrCanvas');
+    container.innerHTML = '';
+
+    // Generate new QR
+    new QRCode(container, {
+      text         : upiStr,
+      width        : 160,
+      height       : 160,
+      colorDark    : '#000000',
+      colorLight   : '#ffffff',
+      correctLevel : QRCode.CorrectLevel.H
+    });
+
+    // Badge colour & text
+    const badge = document.getElementById('qrBadge');
+    badge.textContent = m.badgeText;
+    badge.className   = 'qr-badge ' + m.badge;
+
+    // UPI display
+    document.getElementById('upiDisp').textContent = MY_UPI;
+
+    // Deep link
+    document.getElementById('appLink').href = m.appUrl(MY_UPI, nm, tot, note);
+    document.getElementById('appIco').textContent  = m.icon;
+    document.getElementById('appName').textContent = m.label;
+
+    // Amount
+    document.getElementById('mAmt').textContent = '₹' + tot;
+  }
+
+  function switchMethod(btn, method) {
+    document.querySelectorAll('.mtab').forEach(t=>t.classList.remove('on'));
+    btn.classList.add('on');
+    buildQR(method);
+  }
+
+  function copyUpi() {
+    navigator.clipboard.writeText(MY_UPI).then(() => {
+      const b = document.querySelector('.copybtn');
+      b.textContent = '✅ Copied!';
+      setTimeout(()=>b.textContent='📋 Copy', 2000);
+    });
+  }
+
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+  // ── STEP NAVIGATION ──────────────────────────────
+  function goStep1() {
+    document.getElementById('step1').style.display = 'block';
+    document.getElementById('step2').style.display = 'none';
+    document.getElementById('sd1').className = 'sdot active';
+    document.getElementById('sd2').className = 'sdot idle';
+    document.getElementById('sl12').className = 'sline';
+    document.getElementById('modal').scrollTop = 0;
+  }
+
+  function goStep2() {
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step2').style.display = 'block';
+    document.getElementById('sd1').className = 'sdot done'; document.getElementById('sd1').textContent = '✓';
+    document.getElementById('sd2').className = 'sdot active';
+    document.getElementById('sl12').className = 'sline done';
+    document.getElementById('modal').scrollTop = 0;
+  }
+
+  // ── RECEIPT FILE HANDLING ────────────────────────
+  function pickFile(e) { handleFile(e.target.files[0]); }
+  function dropFile(e) { e.preventDefault(); document.getElementById('dropzone').classList.remove('drag'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }
+
+  function handleFile(file) {
+    if (!file) return;
+    if (file.size > 5*1024*1024) { showRErr('❌ File too large. Maximum 5MB allowed.'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      receiptB64 = ev.target.result;
+      // Show preview for images
+      if (file.type.startsWith('image/')) {
+        document.getElementById('prevImg').src = receiptB64;
+        document.getElementById('prevBox').classList.add('show');
+      } else {
+        document.getElementById('prevBox').classList.remove('show');
+      }
+      // Update dropzone
+      const dz = document.getElementById('dropzone');
+      dz.classList.add('filled');
+      document.getElementById('dzIco').textContent   = '✅';
+      document.getElementById('dzTitle').textContent = file.name;
+      document.getElementById('dzSub').textContent   = (file.size/1024).toFixed(0)+' KB — click to change';
+      document.getElementById('rerr').classList.remove('show');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearReceipt() {
+    receiptB64 = null;
+    document.getElementById('prevBox').classList.remove('show');
+    document.getElementById('prevImg').src = '';
+    document.getElementById('dropzone').classList.remove('filled');
+    document.getElementById('dzIco').textContent   = '📷';
+    document.getElementById('dzTitle').textContent = 'Tap to upload receipt';
+    document.getElementById('dzSub').textContent   = 'Screenshot, photo or PDF • Max 5MB';
+    document.getElementById('fileIn').value = '';
+  }
+
+  function showRErr(msg){ const e=document.getElementById('rerr'); e.textContent=msg; e.classList.add('show'); setTimeout(()=>e.classList.remove('show'),4000); }
+
+  // ── FINAL CONFIRM ────────────────────────────────
+  function confirmBooking() {
+    if (!receiptB64) { showRErr('⚠️ Please upload your payment receipt to confirm booking.'); return; }
+    const btn = document.getElementById('btnConfirm');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Confirming...';
+    const txn = document.getElementById('txnRef').value.trim();
+    setTimeout(() => {
+      doSave(
+        sessionStorage.getItem('bk_addr'),
+        sessionStorage.getItem('bk_ts'),
+        modalMode,
+        receiptB64,
+        txn
+      );
+    }, 700);
+  }
+
+  // ── SAVE BOOKING ─────────────────────────────────
+  function doSave(addr, ts, method, receipt, txn) {
+    const user  = getSession();
+    const total = parseFloat(getTotal());
+    const note  = txn ? ` [TXN:${txn}]` : '';
+    // Append pincode/area to address
+    const pinInfo = selectedPin ? `, ${selectedPin.area} - ${selectedPin.pin}, Mangalore` : '';
+    const bookingId = saveBooking(user.id, tanker.id, liters, total, addr + pinInfo + note, ts, method);
+    if (receipt) sessionStorage.setItem('bk_receipt', receipt);
+    document.getElementById('overlay').classList.remove('open');
+    location.href = `confirm.html?id=${bookingId}`;
+  }
+</script>
+</body>
+</html>
